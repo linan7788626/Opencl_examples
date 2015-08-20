@@ -124,7 +124,6 @@ int main(int argc, const char *argv[]) {
 		xi2[i] = rand() / (float)RAND_MAX;
 	}
 
-
 	//call_kernel(xi1,xi2,count,lpar,alpha1,alpha2,"./play_with.cl");
 
     float *alpha1_c = (float *)malloc(sizeof(float)*count);
