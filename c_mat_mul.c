@@ -107,6 +107,15 @@ void mat_mul(int n1,int n2,int n3, float *A, float *B, float *C) {
 	}
 }
 
+void mat_add(int n1,int n2,int n3, float *A, float *B, float *C) {
+	int i, j, k;
+	for (i = 0; i < n1; i++) {
+		for (j = 0; j < n3; j++) {
+			C[i*n3 + j] = A[i*n2+k]+B[k*n3+j];
+		}
+	}
+}
+
 
 
 int main(int argc, const char *argv[])
@@ -126,7 +135,8 @@ int main(int argc, const char *argv[])
 		B[i] = 1.2;
 	}
 
-	mat_mul(n1,n2,n3,A,B,C_c);
+	//mat_mul(n1,n2,n3,A,B,C_c);
+	mat_add(n1,n2,n3,A,B,C_c);
 	call_kernel(A,B,n1,n2,n3,C,"./matrix_mul1.cl");
 
 	for (i = 0;i<n1*n3;i++) {
