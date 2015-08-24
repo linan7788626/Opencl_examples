@@ -53,7 +53,7 @@ void call_kernel(float *x1,float *x2,int n1,int n2,int n3,float *x3,char * cl_na
 
     program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
     err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    kernel = clCreateKernel(program, "mmul", &err);
+    kernel = clCreateKernel(program, "square", &err);
 	//----------------------------------------------------------------------------
 
     input1 = clCreateBuffer(context,  CL_MEM_READ_ONLY,  sizeof(float)*n1*n2, NULL, NULL);
@@ -63,12 +63,19 @@ void call_kernel(float *x1,float *x2,int n1,int n2,int n3,float *x3,char * cl_na
     err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float)*n1*n2, x1, 0, NULL, NULL);
     err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float)*n2*n3, x2, 0, NULL, NULL);
 
+    //clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
+    //clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
+    //clSetKernelArg(kernel, 2, sizeof(int), &n1);
+    //clSetKernelArg(kernel, 3, sizeof(int), &n2);
+    //clSetKernelArg(kernel, 4, sizeof(int), &n3);
+    //clSetKernelArg(kernel, 5, sizeof(cl_mem), &output);
+
+	int ncount = n1*n3;
+
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
-    clSetKernelArg(kernel, 2, sizeof(int), &n1);
-    clSetKernelArg(kernel, 3, sizeof(int), &n2);
-    clSetKernelArg(kernel, 4, sizeof(int), &n3);
-    clSetKernelArg(kernel, 5, sizeof(cl_mem), &output);
+    clSetKernelArg(kernel, 2, sizeof(cl_mem), &output);
+    clSetKernelArg(kernel, 3, sizeof(int), &ncount);
 
 	//const size_t globalThreads[2] = {n1, n3};
 	//const size_t localThreads[2] = {16,16};
@@ -137,10 +144,10 @@ int main(int argc, const char *argv[])
 
 	//mat_mul(n1,n2,n3,A,B,C_c);
 	mat_add(n1,n2,n3,A,B,C_c);
-	call_kernel(A,B,n1,n2,n3,C,"./matrix_mul1.cl");
+	call_kernel(A,B,n1,n2,n3,C,"./simple_add.cl");
 
-	for (i = 0;i<n1*n3;i++) {
-		printf("%f-----%f \n",C_c[i], C[i]);
-	}
+	//for (i = 0;i<n1*n3;i++) {
+	//	printf("%f-----%f \n",C_c[i], C[i]);
+	//}
 	return 0;
 }

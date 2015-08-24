@@ -1,6 +1,6 @@
 inline float add(float a,float b)		   
 {										   
-   return a+b;                             
+   return sin(a+b);                             
 }                                          
 __kernel void square(                      
    __global float* input1,                  
