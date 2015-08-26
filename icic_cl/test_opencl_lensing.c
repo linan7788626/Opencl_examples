@@ -9,6 +9,7 @@
 #include <OpenCL/opencl.h>
 
 #include "all_cv_test.h"
+#include "icic_omp.h"
 
 void call_kernel_icic(float *source_map,float *posy1,float *posy2, float ysc1, float ysc2, float dsi,
 		int nsx,int nsy,int nlx,int nly,float *lensed_map,char * cl_name) {
@@ -79,14 +80,14 @@ void call_kernel_icic(float *source_map,float *posy1,float *posy2, float ysc1, f
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
     clSetKernelArg(kernel, 2, sizeof(cl_mem), &input3);
-    clSetKernelArg(kernel, 3, sizeof(float), &ysc1);
+    clSetKernelArg(kernel, 3, sizeof(cl_mem), &output);
     clSetKernelArg(kernel, 4, sizeof(float), &ysc1);
-    clSetKernelArg(kernel, 5, sizeof(float), &dsi);
-    clSetKernelArg(kernel, 6, sizeof(int), &nsx);
-    clSetKernelArg(kernel, 7, sizeof(int), &nsy);
-    clSetKernelArg(kernel, 8, sizeof(int), &nlx);
-    clSetKernelArg(kernel, 9, sizeof(int), &nly);
-    clSetKernelArg(kernel,10, sizeof(cl_mem), &output);
+    clSetKernelArg(kernel, 5, sizeof(float), &ysc1);
+    clSetKernelArg(kernel, 6, sizeof(float), &dsi);
+    clSetKernelArg(kernel, 7, sizeof(int), &nsx);
+    clSetKernelArg(kernel, 8, sizeof(int), &nsy);
+    clSetKernelArg(kernel, 9, sizeof(int), &nlx);
+    clSetKernelArg(kernel,10, sizeof(int), &nly);
 //----------------------------------------------------------------------------
 // Runing Kernel Functions
     err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
@@ -123,35 +124,50 @@ int main(int argc, const char *argv[]) {
     float phi0 = 0.0;
     float lpar[] = {ylc0,xlc0,ql0,rc0,re0,phi0};
 
-	int count = 1024*1024;
-    float *xi1 = (float *)malloc(sizeof(float)*count);
-    float *xi2 = (float *)malloc(sizeof(float)*count);
-    float *alpha1 = (float *)malloc(sizeof(float)*count);
-    float *alpha2 = (float *)malloc(sizeof(float)*count);
+	float ysc1 = 0.0;
+	float ysc2 = 0.0;
+	float dsi = 0.03;
+
+	int nsx = 256;
+	int nsy = 256;
+	int counts = nsx*nsy;
+	int nlx = 256;
+	int nly = 256;
+	int countl = nlx*nly;
+
+    float *lensed_map = (float *)malloc(sizeof(float)*countl);
+    float *posy1 = (float *)malloc(sizeof(float)*countl);
+    float *posy2 = (float *)malloc(sizeof(float)*countl);
+    float *source_map = (float *)malloc(sizeof(float)*counts);
     int correct;
 
     int i = 0;
-    for(i = 0; i < count; i++) {
-		xi1[i] = rand() / (float)RAND_MAX;
-		xi2[i] = rand() / (float)RAND_MAX;
+    for(i = 0; i < counts; i++) {
+		source_map[i] = rand() / (float)RAND_MAX;
+	}
+    for(i = 0; i < countl; i++) {
+		posy1[i] = rand() / (float)RAND_MAX;
+		posy2[i] = rand() / (float)RAND_MAX;
 	}
 
 
 	//call_kernel(xi1,xi2,count,lpar,alpha1,alpha2,"./play_with.cl");
+	call_kernel_icic(source_map,posy1,posy2,ysc1,ysc2,dsi,nsx,nsy,nlx,nly,lensed_map,"./icic_opencl.cl");
 
-    float *alpha1_c = (float *)malloc(sizeof(float)*count);
-    float *alpha2_c = (float *)malloc(sizeof(float)*count);
+    float *lensed_map_c = (float *)malloc(sizeof(float)*countl);
+	inverse_cic(source_map,posy1,posy2,ysc1,ysc2,dsi,nsx,nsy,nlx,nly,lensed_map_c);
     correct = 0;
-    for(i = 0; i < count; i++) {
-		lq_nie(xi1[i],xi2[i],lpar,&alpha1_c[i],&alpha2_c[i]);
+    for(i = 0; i < countl; i++) {
+		//lq_nie(xi1[i],xi2[i],lpar,&alpha1_c[i],&alpha2_c[i]);
 		//printf("%f-----%f||%f-----%f\n",alpha1[i],alpha1_c[i],alpha2[i],alpha2_c[i]);
+		//inverse_cic(source_map,posy1,posy2,ysc1,ysc2,dsi,nsx,nsy,nlx,nly,lensed_map_c);
+		printf("%f-----%f|\n",lensed_map[i],lensed_map_c[i]);
     }
 
-	free(xi1);
-	free(xi2);
-	free(alpha1);
-	free(alpha2);
-	free(alpha1_c);
-	free(alpha2_c);
+	free(source_map);
+	free(posy1);
+	free(posy2);
+	free(lensed_map);
+	free(lensed_map_c);
     return 0;
 }

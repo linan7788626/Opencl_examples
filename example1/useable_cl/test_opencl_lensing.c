@@ -125,14 +125,14 @@ int main(int argc, const char *argv[]) {
 	}
 
 
-	//call_kernel(xi1,xi2,count,lpar,alpha1,alpha2,"./play_with.cl");
+	call_kernel(xi1,xi2,count,lpar,alpha1,alpha2,"./play_with.cl");
 
     float *alpha1_c = (float *)malloc(sizeof(float)*count);
     float *alpha2_c = (float *)malloc(sizeof(float)*count);
     correct = 0;
     for(i = 0; i < count; i++) {
 		lq_nie(xi1[i],xi2[i],lpar,&alpha1_c[i],&alpha2_c[i]);
-		//printf("%f-----%f||%f-----%f\n",alpha1[i],alpha1_c[i],alpha2[i],alpha2_c[i]);
+		printf("%f-----%f||%f-----%f\n",alpha1[i],alpha1_c[i],alpha2[i],alpha2_c[i]);
     }
 
 	free(xi1);
