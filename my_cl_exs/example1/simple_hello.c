@@ -72,7 +72,9 @@ void call_kernel(float *data1,float *data2,int count,char * cl_name,float *resul
     err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &output);
     err |= clSetKernelArg(kernel, 3, sizeof(int), &count);
 
+	printf("*********************%d\n", local);
     err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
+	printf("*********************%d\n", local);
     global = count;
     err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
     clFinish(commands);
@@ -112,7 +114,7 @@ int main(int argc, const char *argv[]) {
     for(i = 0; i < count; i++) {
         if(results[i] == sin(data1[i]+data2[i]))
             correct++;
-		printf("%f-----%f\n",results[i],data1[i]+data2[i]);
+		//printf("%f-----%f\n",results[i],data1[i]+data2[i]);
     }
     printf("'%d/%d' correct values!\n", correct, count);
 
