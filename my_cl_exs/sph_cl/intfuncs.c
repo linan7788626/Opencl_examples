@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#include <omp.h>
+//#include <omp.h>
 #include "intfuncs.h"
 #include "allvars_SPH.h"
 #include "proto.h"
