@@ -31,7 +31,7 @@ __kernel void wcic_cl(
 	wx = 1.0f-(xp-(float)ip);
 	wy = 1.0f-(yp-(float)jp);
 
-	if (ip<0||ip>(nx-2)||jp<0||jp>(ny-2)) zp = 0.0f;
+	if (ip<0||ip>(nx-2)||jp<0||jp>(ny-2)) return;
 	
 	cic_out[ip*ny+jp] += wx*wy*zp;
 	cic_out[ip*ny+(jp+1)] += wx*(1.0f-wy)*zp;

@@ -24,6 +24,10 @@ void wcic(float *cic_in,float *x_in,float *y_in,float bsx,float bsy,int nx,int n
         wy = 1.0-(yp-(float)jp);
 
 		if (ip<0||ip>(nx-2)||jp<0||jp>(ny-2)) continue;
+		//if (ip<0) {ip = 0;wx = 0.0;}
+		//if (ip>(nx-2)) {ip = nx-2;wx = 1.0;}
+		//if (jp<0) {jp = 0;wy = 0.0;}
+		//if (jp>(ny-2)) {jp = ny-2;wy = 1.0;}
 
         cic_out[ip*ny+jp] += wx*wy*zp;
         cic_out[ip*ny+(jp+1)] += wx*(1.0-wy)*zp;
