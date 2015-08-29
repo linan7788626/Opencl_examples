@@ -12,7 +12,7 @@
 #include "allvars_SPH.h"
 #include "proto.h"
 
-void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int Nc,int np,float *sdens_out,char * cl_name) {
+void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int nc,int np,float *sdens_out,char * cl_name) {
 //----------------------------------------------------------------------------
 // Initialization
     FILE* programHandle;
@@ -69,7 +69,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     input1 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
     input2 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
     input3 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
-    output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+    output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * nc*nc, NULL, NULL);
 //----------------------------------------------------------------------------
 // Copy Data to Device
     err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float) * np, x1_in, 0, NULL, NULL);
@@ -90,7 +90,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 	printf("--------------------------%d\n", err);
     err = clSetKernelArg(kernel, 4, sizeof(float), &bsz);
 	printf("--------------------------%d\n", err);
-    err = clSetKernelArg(kernel, 5, sizeof(int), &Nc);
+    err = clSetKernelArg(kernel, 5, sizeof(int), &nc);
 	printf("--------------------------%d\n", err);
     err = clSetKernelArg(kernel, 6, sizeof(int), &np);
 	printf("--------------------------%d\n", err);
@@ -104,7 +104,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     clFinish(commands);
 //----------------------------------------------------------------------------
 // Output Array
-    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * Nc*Nc, sdens_out, 0, NULL, NULL );
+    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * nc*nc, sdens_out, 0, NULL, NULL );
 	printf("--------------------------%d\n", err);
 //----------------------------------------------------------------------------
 // Free the Memory in Device
@@ -128,51 +128,48 @@ int main(int argc, const char *argv[])
 	float bsz = 1.0;
 	int nc = 256;
 	int np = 128*128;
-	int ngb = 32;
+	int ngb = 8;
 
-    float *x1_in = (float *)malloc(sizeof(float)*np);
-    float *x2_in = (float *)malloc(sizeof(float)*np);
-    float *x3_in = (float *)malloc(sizeof(float)*np);
-    float *SmoothLength = (float *)malloc(sizeof(float)*np);
+    float *x1_in = (float *)malloc(np*sizeof(float));
+    float *x2_in = (float *)malloc(np*sizeof(float));
+    float *x3_in = (float *)malloc(np*sizeof(float));
+    float *SmoothLength = (float *)malloc(np*sizeof(float));
+
     float *sdens_out = (float *)malloc(sizeof(float)*nc*nc);
     float *sdens_out_c = (float *)malloc(sizeof(float)*nc*nc);
 
 	int i,j,sph;
-    for(i = 0; i < np; i++) {
-		x1_in[i] = rand() / (float)RAND_MAX;
-		x2_in[i] = rand() / (float)RAND_MAX;
-		x3_in[i] = rand() / (float)RAND_MAX;
-		//SmoothLength[i] = rand() / (float)RAND_MAX;
-	}
-
 	PARTICLE *particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
-	for(i=0;i<np;i++) {
-  	  	particle[i].x = x1_in[i];
-  	  	particle[i].y = x2_in[i];
-  	  	particle[i].z = x3_in[i];
+    for(i = 0; i < np; i++) {
+		particle[i].x = rand() / (float)RAND_MAX-0.5;
+		particle[i].y = rand() / (float)RAND_MAX-0.5;
+		particle[i].z = rand() / (float)RAND_MAX-0.5;
+		//SmoothLength[i] = rand() / (float)RAND_MAX;
   	}
 
 	double SPHBoxSize = 0.0;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
+	long Nc = (long)nc;
 	sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
 	if (sph == 1) {
 		printf("FindHsml is failed!\n");
 	}
-	free(particle);
 
-	particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
+	Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
+
 	for(i=0;i<np;i++) {
-  	  	particle[i].x = (float)(x1_in[i]);
-  	  	particle[i].y = (float)(x2_in[i]);
+  	  	x1_in[i] = particle[i].x;
+  	  	x2_in[i] = particle[i].y;
+  	  	x3_in[i] = particle[i].z;
   	}
-	Make_cell_SPH(nc,bsz,np,particle,SmoothLength,sdens_out_c);
+	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 
-	//call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
-
-    //for(i = 0; i < nc*nc; i++) {
-	//	printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
-    //}
+    for(i = 0; i < nc*nc; i++) {
+		//if (sdens_out[i] > 0)
+		//	ncount = ncount +1;
+		printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
+    }
 
 	free(SmoothLength);
 	free(particle);

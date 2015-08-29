@@ -193,7 +193,6 @@ int cal_sdens_sp(float x_p,float y_p,float hdsl,float dsx,long Nc, float *sdens_
 	j_l = (int)((y_p-2.0*hdsl)/dsx);
 	nby = j_u-j_l+1;
 
-
 	if (nbx <=2 && nby <=2) {
 		sdens_sp[i_l*Nc+j_l] += 1.0/(dsx*dsx);
 		return 0;
@@ -232,8 +231,27 @@ int cal_sdens_sp(float x_p,float y_p,float hdsl,float dsx,long Nc, float *sdens_
 			}
 			return 0;
 		}
-		return 0;
 	}
+
+	//sd_tot = 0.0;
+	//for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+	//	loc_i = i_l + i;
+	//	loc_j = j_l + j;
+	//	R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));
+	//	sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
+	//}
+
+
+	//for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+	//	loc_i = i_l + i;
+	//	loc_j = j_l + j;
+	//	if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;
+
+	//	R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));
+	//	sdens_sp[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
+	//}
+
+	return 0;
 }
 
 void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {
@@ -247,7 +265,7 @@ void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * Smooth
 	}
 
 
-#pragma omp parallel num_threads(4)	\
+#pragma omp parallel num_threads(1)	\
 	shared(SmoothLength,sdens,particle,Np,bsz,dsx) \
 	private(m,x_p,y_p,hdsl)
 	{
@@ -256,7 +274,7 @@ void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * Smooth
 	#pragma omp for schedule(dynamic,16)
 		for(m=0;m<Np;m++) {
 
-			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].x)> 0.5*bsz)) continue;
+			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].y)> 0.5*bsz)) continue;
 
 			hdsl = SmoothLength[m];
 

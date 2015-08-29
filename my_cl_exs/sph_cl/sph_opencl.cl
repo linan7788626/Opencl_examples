@@ -19,10 +19,10 @@ __kernel void sph_cl(
 	__global float* SmoothLength,
 	__global float* sdens_out,
 	const float bsz,
-	const int Nc,
-	const int Np) {                                          
+	const int nc,
+	const int np) {                                          
 
-	float dsx = bsz/(float)(Nc);
+	float dsx = bsz/(float)(nc);
 	float R;
 	float sd_tot;
 
@@ -32,13 +32,13 @@ __kernel void sph_cl(
 	float x_p,y_p,hdsl;
 
 	int m = get_global_id(0);               
-	if((fabs(x1_in[m]) > 0.5f*bsz) || (fabs(x2_in[m])> 0.5f*bsz)) return;
 
-	barrier(CLK_LOCAL_MEM_FENCE);
-	x_p = x1_in[m]+0.5f*bsz;
-	y_p = x2_in[m]+0.5f*bsz;
+	x_p = x1_in[m]+0.5*bsz;
+	y_p = x2_in[m]+0.5*bsz;
 	hdsl = SmoothLength[m];
 
+	if((fabs(x1_in[m]) > 0.5*bsz) || (fabs(x2_in[m])> 0.5*bsz)) return;
+	
 	i_u = (int)((x_p+2.0f*hdsl)/dsx);
 	i_l = (int)((x_p-2.0f*hdsl)/dsx);
 	nbx = i_u-i_l+1;
@@ -47,43 +47,43 @@ __kernel void sph_cl(
 	j_l = (int)((y_p-2.0f*hdsl)/dsx);
 	nby = j_u-j_l+1;
 
-	//if (nbx <=2 && nby <=2) {
-	//	sdens_out[i_l*Nc+j_l] += 1.0f/(dsx*dsx);
-	//	return;
-	//}
-	//else {
-	//	//if ((nbx+nby)/2 <= Ncr) {
-	//	//	sd_tot = 0.0f;
-	//	//	for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-	//	//		loc_i = i_l + i;
-	//	//		loc_j = j_l + j;
-	//	//		R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-	//	//		sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
-	//	//	}
+	if (nbx <=2 && nby <=2) {
+		sdens_out[i_l*nc+j_l] += 1.0f/(dsx*dsx);
+		return;
+	}
+	else {
+		if ((nbx+nby)/2 <= Ncr) {
+			sd_tot = 0.0f;
+			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+				loc_i = i_l + i;
+				loc_j = j_l + j;
+				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+				sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
+			}
 
-	//	//	for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-	//	//		loc_i = i_l + i;
-	//	//		loc_j = j_l + j;
-	//	//		if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;
+			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+				loc_i = i_l + i;
+				loc_j = j_l + j;
+				if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
 
-	//	//		R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-	//	//		sdens_out[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
-	//	//	}
-	//	//	return;
-	//	//}
+				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
+			}
+			return;
+		}
 
-	//	//if ((nbx+nby)/2 > Ncr) {
-	//	//	for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-	//	//		loc_i = i_l + i;
-	//	//		loc_j = j_l + j;
-	//	//		if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;
+		if ((nbx+nby)/2 > Ncr) {
+			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+				loc_i = i_l + i;
+				loc_j = j_l + j;
+				if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
 
-	//	//		R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-	//	//		sdens_out[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
-	//	//	}
-	//	//	return;
-	//	//}
-	//	return;
-	//}
+				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
+			}
+			return;
+		}
+		return;
+	}
 	return;
 }
