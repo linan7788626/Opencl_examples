@@ -10,11 +10,13 @@
 
 #include "all_cv_test.h"
 
+#define MAX_SOURCE_SIZE (0x100000)
+
 void call_kernel_2d(float *x1,float *x2,float *x11,float *x12,float *x21,float *x22,float Dcell,int Nc,int dif_tag,char * cl_name) {
 
-    FILE* programHandle;
-    size_t programSize, KernelSourceSize;
-    char *programBuffer, *KernelSource;
+	//FILE* programHandle;
+    //size_t programSize, KernelSourceSize;
+    //char *programBuffer, *KernelSource;
 
 	int err;
 	int DIM = 2;
@@ -42,30 +44,49 @@ void call_kernel_2d(float *x1,float *x2,float *x11,float *x12,float *x21,float *
 	//----------------------------------------------------------------------------
 	err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float) * Nc*Nc, x1, 0, NULL, NULL);
 	err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float) * Nc*Nc, x2, 0, NULL, NULL);
-	//----------------------------------------------------------------------------
-    // get size of kernel source
-    programHandle = fopen(cl_name, "r");
-    fseek(programHandle, 0, SEEK_END);
-    programSize = ftell(programHandle);
-    rewind(programHandle);
+//	//----------------------------------------------------------------------------
+//    // get size of kernel source
+//    programHandle = fopen(cl_name, "r");
+//    fseek(programHandle, 0, SEEK_END);
+//    programSize = ftell(programHandle);
+//    rewind(programHandle);
+//
+//    programBuffer = (char*) malloc(programSize + 1);
+//    programBuffer[programSize] = '\0';
+//    fread(programBuffer, sizeof(char), programSize, programHandle);
+//    fclose(programHandle);
+//
+//    // create program from buffer
+//    program = clCreateProgramWithSource(context,1,(const char**) &programBuffer,&programSize, NULL);
+//    free(programBuffer);
+//
+//    // read kernel source back in from program to check
+//    clGetProgramInfo(program, CL_PROGRAM_SOURCE, 0, NULL, &KernelSourceSize);
+//    KernelSource = (char*) malloc(KernelSourceSize);
+//    clGetProgramInfo(program, CL_PROGRAM_SOURCE, KernelSourceSize, KernelSource, NULL);
+//
+//    program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+//    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+//    kernel = clCreateKernel(program, "lanczos_2_cl", &err);
+//---------------------------------------------------------------------
+///* Load kernel source file */
+	FILE * fp;
+	const char fileName[] = "./dataParallel.cl";
+	size_t KernelSourceSize;
+	char *KernelSource;
+	fp = fopen("./lanczos_2_opencl.cl", "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernel.\n");
+		exit(1);
+	}
+	KernelSource = (char *)malloc(MAX_SOURCE_SIZE);
+	KernelSourceSize = fread(KernelSource, 1, MAX_SOURCE_SIZE, fp);
+	program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+	err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+	kernel = clCreateKernel(program, "lanczos_2_cl", &err);
+	fclose(fp);
+//---------------------------------------------------------------------
 
-    programBuffer = (char*) malloc(programSize + 1);
-    programBuffer[programSize] = '\0';
-    fread(programBuffer, sizeof(char), programSize, programHandle);
-    fclose(programHandle);
-
-    // create program from buffer
-    program = clCreateProgramWithSource(context,1,(const char**) &programBuffer,&programSize, NULL);
-    free(programBuffer);
-
-    // read kernel source back in from program to check
-    clGetProgramInfo(program, CL_PROGRAM_SOURCE, 0, NULL, &KernelSourceSize);
-    KernelSource = (char*) malloc(KernelSourceSize);
-    clGetProgramInfo(program, CL_PROGRAM_SOURCE, KernelSourceSize, KernelSource, NULL);
-
-    program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
-    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    kernel = clCreateKernel(program, "lanczos_2_cl", &err);
 
 	clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
@@ -153,7 +174,7 @@ int main(int argc, const char *argv[])
 	call_kernel_2d(A1,A2,A11,A12,A21,A22,Dcell,Nc,-1,"./lanczos_2_opencl.cl");
 
 	for (i = 0;i<Nc*Nc;i++) {
-		printf("%f-----%f \n",A11_c[i], A11[i]);
+		printf("%f-----||%f \n",A11_c[i], A11[i]);
 	}
 	return 0;
 }

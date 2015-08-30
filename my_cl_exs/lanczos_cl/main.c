@@ -53,12 +53,12 @@ void call_kernel(float *xi1,float *xi2,int count,float *lpar,float *alpha1,float
     program = clCreateProgramWithSource(context,1,(const char**) &programBuffer,&programSize, NULL);
     free(programBuffer);
 
-    // read kernel source back in from program to check
-    clGetProgramInfo(program, CL_PROGRAM_SOURCE, 0, NULL, &KernelSourceSize);
-    KernelSource = (char*) malloc(KernelSourceSize);
-    clGetProgramInfo(program, CL_PROGRAM_SOURCE, KernelSourceSize, KernelSource, NULL);
+    //// read kernel source back in from program to check
+    //clGetProgramInfo(program, CL_PROGRAM_SOURCE, 0, NULL, &KernelSourceSize);
+    //KernelSource = (char*) malloc(KernelSourceSize);
+    //clGetProgramInfo(program, CL_PROGRAM_SOURCE, KernelSourceSize, KernelSource, NULL);
 
-    program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+    //program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
     err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
     kernel = clCreateKernel(program, "square", &err);
 	//----------------------------------------------------------------------------
