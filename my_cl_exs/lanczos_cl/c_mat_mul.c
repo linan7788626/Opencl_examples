@@ -8,17 +8,15 @@
 #include <sys/stat.h>
 #include <OpenCL/opencl.h>
 
-void call_kernel_2d(float *x1,float *x2,int n1,int n2,int n3,float *x3,char * cl_name) {
+#include "all_cv_test.h"
+
+void call_kernel_2d(float *x1,float *x2,float *x11,float *x12,float *x21,float *x22,float Dcell,int Nc,int dif_tag,char * cl_name) {
 
     FILE* programHandle;
     size_t programSize, KernelSourceSize;
     char *programBuffer, *KernelSource;
 
-	int err, szA, szB, szC;
-	szA = n1*n2;
-	szB = n2*n3;
-	szC = n1*n3;
-
+	int err;
 	int DIM = 2;
 	size_t global[DIM];
 	size_t local[DIM];
@@ -28,15 +26,22 @@ void call_kernel_2d(float *x1,float *x2,int n1,int n2,int n3,float *x3,char * cl
 	cl_program program;
 	cl_kernel kernel;
 	cl_uint nd;
-	cl_mem input1, input2, output;
+	cl_mem input1,input2,output1,output2,output3,output4;
 
 	err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL); context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
 	commands = clCreateCommandQueue(context, device_id, 0, &err);
-	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * szA, NULL, NULL);
-	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * szB, NULL, NULL);
-	output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * szC, NULL, NULL);
-	err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float) * szA, x1, 0, NULL, NULL);
-	err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float) * szB, x2, 0, NULL, NULL);
+
+	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+	output1 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+	output2 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+	output3 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+	output4 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
+
+
+	//----------------------------------------------------------------------------
+	err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float) * Nc*Nc, x1, 0, NULL, NULL);
+	err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float) * Nc*Nc, x2, 0, NULL, NULL);
 	//----------------------------------------------------------------------------
     // get size of kernel source
     programHandle = fopen(cl_name, "r");
@@ -60,23 +65,34 @@ void call_kernel_2d(float *x1,float *x2,int n1,int n2,int n3,float *x3,char * cl
 
     program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
     err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    kernel = clCreateKernel(program, "mmul", &err);
+    kernel = clCreateKernel(program, "lanczos_2_cl", &err);
 
-	err  = clSetKernelArg(kernel, 0, sizeof(int), &n1);
-	err |= clSetKernelArg(kernel, 1, sizeof(int), &n2);
-	err |= clSetKernelArg(kernel, 2, sizeof(int), &n3);
-	err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), &input1);
-	err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), &input2);
-	err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), &output);
+	clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
+	clSetKernelArg(kernel, 2, sizeof(cl_mem), &output1);
+	clSetKernelArg(kernel, 3, sizeof(cl_mem), &output2);
+	clSetKernelArg(kernel, 4, sizeof(cl_mem), &output3);
+	clSetKernelArg(kernel, 5, sizeof(cl_mem), &output4);
+	clSetKernelArg(kernel, 6, sizeof(float), &Dcell);
+	clSetKernelArg(kernel, 7, sizeof(int), &Nc);
+	clSetKernelArg(kernel, 8, sizeof(int), &dif_tag);
 
-	global[0] = (size_t) n1; global[1] = (size_t) n3;
+	global[0] = (size_t) Nc; global[1] = (size_t) Nc;
 	int ndim = 2;
 	err = clEnqueueNDRangeKernel(commands, kernel, ndim, NULL, global, NULL, 0, NULL, NULL); clFinish(commands);
-	err = clEnqueueReadBuffer(commands, output, CL_TRUE, 0, sizeof(float) * szC, x3, 0, NULL, NULL );
+
+	err = clEnqueueReadBuffer(commands, output1, CL_TRUE, 0, sizeof(float) * Nc*Nc, x11, 0, NULL, NULL );
+	err = clEnqueueReadBuffer(commands, output2, CL_TRUE, 0, sizeof(float) * Nc*Nc, x12, 0, NULL, NULL );
+	err = clEnqueueReadBuffer(commands, output3, CL_TRUE, 0, sizeof(float) * Nc*Nc, x21, 0, NULL, NULL );
+	err = clEnqueueReadBuffer(commands, output4, CL_TRUE, 0, sizeof(float) * Nc*Nc, x22, 0, NULL, NULL );
 
     clReleaseMemObject(input1);
     clReleaseMemObject(input2);
-    clReleaseMemObject(output);
+    clReleaseMemObject(output1);
+    clReleaseMemObject(output2);
+    clReleaseMemObject(output3);
+    clReleaseMemObject(output4);
+
     clReleaseProgram(program);
     clReleaseKernel(kernel);
     clReleaseCommandQueue(commands);
@@ -111,26 +127,33 @@ void mat_add(int n1,int n2,int n3, float *A, float *B, float *C) {
 int main(int argc, const char *argv[])
 {
 	// 4.2X2.3 = 4.3
-	int n1 = 512,n2 = 256,n3 = 1024;
-	float *A = (float *) malloc(n1*n2*sizeof(float));
-	float *B = (float *) malloc(n2*n3*sizeof(float));
-	float *C = (float *) malloc(n1*n3*sizeof(float));
-	float *C_c = (float *) malloc(n1*n3*sizeof(float));
+	float boxsize = 1.0;
+	int Nc = 1024;
+	float Dcell = boxsize/(float)(Nc);
+	float *A1 = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A2 = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A11 = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A12 = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A21 = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A22 = (float *) malloc(Nc*Nc*sizeof(float));
+
+	float *A11_c = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A12_c = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A21_c = (float *) malloc(Nc*Nc*sizeof(float));
+	float *A22_c = (float *) malloc(Nc*Nc*sizeof(float));
 
 	int i;
-	for (i = 0; i < n1*n2; i++) {
-		A[i] = rand() / (float)RAND_MAX;
-	}
-	for (i = 0; i < n2*n3; i++) {
-		B[i] = rand() / (float)RAND_MAX;
+	for (i = 0; i < Nc*Nc; i++) {
+		A1[i] = rand() / (float)RAND_MAX;
+		A2[i] = rand() / (float)RAND_MAX;
 	}
 
-	mat_mul(n1,n2,n3,A,B,C_c);
+	lanczos_diff_2_tag(A1,A2,A11_c,A12_c,A21_c,A22_c,Dcell,Nc,-1);
 	//mat_add(n1,n2,n3,A,B,C_c);
-	call_kernel_2d(A,B,n1,n2,n3,C,"./matrix_mul2d.cl");
+	call_kernel_2d(A1,A2,A11,A12,A21,A22,Dcell,Nc,-1,"./lanczos_2_opencl.cl");
 
-	for (i = 0;i<n1*n3;i++) {
-		printf("%f-----%f \n",C_c[i], C[i]);
+	for (i = 0;i<Nc*Nc;i++) {
+		printf("%f-----%f \n",A11_c[i], A11[i]);
 	}
 	return 0;
 }
