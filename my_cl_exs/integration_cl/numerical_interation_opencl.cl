@@ -4,7 +4,8 @@ numerical-integration.cl
 
 float f(float x)
 {
-    return x*x;
+    //return x*x;
+	return 16.0*(x-1.0)/(x*x*x*x-2*x*x*x+4*x-4);//(0,1)
 }
 
 float simple_trap(float a, float b)
