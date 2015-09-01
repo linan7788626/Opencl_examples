@@ -27,9 +27,9 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     cl_kernel kernel;                   // compute kernel
 //----------------------------------------------------------------------------
 // Claim Variables for Device
-    cl_mem input1;                       // device memory used for the input array
-    cl_mem input2;                       // device memory used for the input array
-    cl_mem input3;                       // device memory used for the input array
+    cl_mem input1;                      // device memory used for the input array
+    cl_mem input2;                      // device memory used for the input array
+    cl_mem input3;                      // device memory used for the input array
     cl_mem output;                      // device memory used for the output array
 //----------------------------------------------------------------------------
 // Setup Context of OpenCL
@@ -57,17 +57,17 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 	kernel = clCreateKernel(program, "sph_cl", &err);
 //----------------------------------------------------------------------------
 // Allocate Memory for Device
-    input1 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
-    input2 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
-    input3 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float) * np, NULL, NULL);
-    output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * nc*nc, NULL, NULL);
+    input1 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)*np, NULL, NULL);
+    input2 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)*np, NULL, NULL);
+    input3 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)*np, NULL, NULL);
+    output = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float)*nc*nc, NULL, NULL);
 //----------------------------------------------------------------------------
 // Copy Data to Device
-    err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float) * np, x1_in, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float)*np, x1_in, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
-    err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float) * np, x2_in, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float)*np, x2_in, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
-    err = clEnqueueWriteBuffer(commands, input3, CL_TRUE, 0, sizeof(float) * np, SmoothLength, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(commands, input3, CL_TRUE, 0, sizeof(float)*np, SmoothLength, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
 //----------------------------------------------------------------------------
 // Passing Parameters into Kernel Functions
@@ -98,7 +98,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 //----------------------------------------------------------------------------
 // Output Array
 	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
-    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float) * nc*nc, sdens_out, 0, NULL, NULL );
+    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float)*nc*nc, sdens_out, 0, NULL, NULL );
 	printf("--------------------------^^^^^^^^^^%d\n", err);
 	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 //----------------------------------------------------------------------------
@@ -121,9 +121,9 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 512;
+	int nc = 256;
 	int np = 200000;
-	int ngb = 12;
+	int ngb = 16;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	long Nc = (long)nc;

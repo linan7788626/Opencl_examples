@@ -1,0 +1,114 @@
+/* test4.c */
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <OpenCL/OpenCL.h>
+ 
+#define CL_CPPFLAGS ""
+ 
+#ifdef GPU
+#define DEVICE CL_DEVICE_TYPE_GPU
+#define DEVICE_STR "test4.cl compiled on GPU"
+#else
+#define DEVICE CL_DEVICE_TYPE_CPU
+#define DEVICE_STR "test4.cl compiled on CPU"
+#endif
+ 
+char* load_program_source(const char *filename);
+ 
+int main(int argc, char** argv)
+{
+	size_t dim = (argc > 1) ? atoi(argv[1]) : 8; // dimension copy array
+	size_t global_ws = (argc > 2) ? atoi(argv[2]) : 1; // number of work items
+ 
+	printf("%s\n", DEVICE_STR);
+ 
+	const char* quad_kernel = "test4.cl";
+	const char* kernel_name = "test4";
+ 
+	int err;
+	cl_context context;	
+	cl_device_id device;
+	cl_command_queue queue;
+	cl_program program;
+	cl_kernel kernel;
+ 
+	err = clGetDeviceIDs(NULL, DEVICE, 1, &device, NULL);
+ 
+#ifdef __CL_EXT_H  // Apple extension for error logging.
+	context = clCreateContext(0, 1, &device, &clLogMessagesToStderrAPPLE, NULL, &err);
+#else
+	context = clCreateContext(0, 1, &device, NULL, NULL, &err);
+#endif
+	queue = clCreateCommandQueue(context, device, 0, NULL);
+ 
+	char scratch[2048];
+	char* source = load_program_source(quad_kernel);
+ 
+	program = clCreateProgramWithSource(context, 1, (const char**)&source, NULL, &err);
+	err = clBuildProgram(program, 1, &device, CL_CPPFLAGS, NULL, NULL);
+	err |= clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 2048, scratch, NULL);
+	if (err != CL_SUCCESS) {
+		fprintf(stderr, "[BUILD LOG]\n%s\n", scratch);
+		return err; 
+	}
+	kernel = clCreateKernel(program, kernel_name, &err);
+ 
+	size_t out_size = global_ws * sizeof(float);
+ 
+	float* out_loc = (float*) malloc(out_size);
+	cl_mem out_buf = clCreateBuffer(context, CL_MEM_WRITE_ONLY, out_size, NULL, NULL);
+ 
+	err = clSetKernelArg(kernel, 0, sizeof(size_t), &dim);
+	err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &out_buf);
+	assert(err == CL_SUCCESS);
+ 
+	err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_ws, NULL, 0, NULL, NULL);
+	err = clEnqueueBarrier(queue);
+	assert(err == CL_SUCCESS);
+ 
+	err = clEnqueueReadBuffer(queue, out_buf, CL_TRUE, 0, out_size, out_loc, 0, NULL, NULL);
+	assert(err == CL_SUCCESS);
+ 
+	free(out_loc);
+	clReleaseMemObject(out_buf);
+ 
+	clReleaseKernel(kernel);
+	clReleaseProgram(program);
+	clReleaseCommandQueue(queue);
+	clReleaseContext(context);
+ 
+	return 0;
+}
+ 
+char* load_program_source(const char *filename)
+{ 
+	struct stat statbuf;
+	FILE *fh; 
+	char *source; 
+ 
+	fh = fopen(filename, "r");
+	if (fh == 0)
+		return 0; 
+ 
+	stat(filename, &statbuf);
+	source = (char *) malloc(statbuf.st_size + 1);
+	fread(source, statbuf.st_size, 1, fh);
+	source[statbuf.st_size] = '\0'; 
+ 
+	return source; 
+}
+
+
+$ clang -framework OpenCL test4.c -DGPU -o gpu
+$ clang -framework OpenCL test4.c -o cpu
+$ ./cpu && ./gpu 
+test4.cl compiled on CPU
+test4.cl compiled on GPU
+[CL_INVALID_COMMAND_QUEUE] : OpenCL Fatal Error : Read caused an error that invalidated the queue (0x100107010). This may be  due to a resource allocation failure at execution time.
+Break on OpenCLFatalBreak to debug.
+[CL_INVALID_COMMAND_QUEUE] : OpenCL Error : clEnqueueReadBuffer failed: Invalid command queue
+Break on OpenCLErrorBreak to debug.
+Assertion failed: (err == CL_SUCCESS), function main, file test4.c, line 103.
