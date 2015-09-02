@@ -4,6 +4,8 @@
 #include <time.h>
 #include <string.h>
 //#include <omp.h>
+#include <malloc/malloc.h>
+
 #include "intfuncs.h"
 #include "allvars_SPH.h"
 #include "proto.h"
@@ -80,9 +82,6 @@ int cal_sph_sdens(char *in_part,float bsz,long  Nc,float dsx,long Ngb,long Np,fl
 
 	double SPHBoxSize = 0.0;
 	sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
-	if (sph == 1) {
-		printf("FindHsml is failed!\n");
-	}
 	free(particle);
 
 	particle = (PARTICLE *)malloc(Np*sizeof(PARTICLE));
@@ -193,6 +192,7 @@ int cal_sdens_sp(float x_p,float y_p,float hdsl,float dsx,long Nc, float *sdens_
 	j_l = (int)((y_p-2.0*hdsl)/dsx);
 	nby = j_u-j_l+1;
 
+
 	if (nbx <=2 && nby <=2) {
 		sdens_sp[i_l*Nc+j_l] += 1.0/(dsx*dsx);
 		return 0;
@@ -232,26 +232,6 @@ int cal_sdens_sp(float x_p,float y_p,float hdsl,float dsx,long Nc, float *sdens_
 			return 0;
 		}
 	}
-
-	//sd_tot = 0.0;
-	//for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-	//	loc_i = i_l + i;
-	//	loc_j = j_l + j;
-	//	R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));
-	//	sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
-	//}
-
-
-	//for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-	//	loc_i = i_l + i;
-	//	loc_j = j_l + j;
-	//	if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;
-
-	//	R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));
-	//	sdens_sp[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
-	//}
-
-	return 0;
 }
 
 void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {
@@ -264,92 +244,115 @@ void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * Smooth
 		sdens[i*Nc+j] = 0.0;
 	}
 
+	for(m=0;m<Np;m++) {
 
-#pragma omp parallel num_threads(1)	\
-	shared(SmoothLength,sdens,particle,Np,bsz,dsx) \
-	private(m,x_p,y_p,hdsl)
-	{
-	float *sdens_sp;
-	sdens_sp = (float *)calloc(Nc*Nc,sizeof(float));
-	#pragma omp for schedule(dynamic,16)
-		for(m=0;m<Np;m++) {
+		if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].y)> 0.5*bsz)) continue;
 
-			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].y)> 0.5*bsz)) continue;
+		hdsl = SmoothLength[m];
 
-			hdsl = SmoothLength[m];
+		x_p = particle[m].x+0.5*bsz;
+		y_p = particle[m].y+0.5*bsz;
 
-			x_p = particle[m].x+0.5*bsz;
-			y_p = particle[m].y+0.5*bsz;
-
-			cal_sdens_sp(x_p,y_p,hdsl,dsx,Nc,sdens_sp);
-		}
-	#pragma omp critical
-	{
-		for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
-			sdens[i*Nc+j] += sdens_sp[i*Nc+j];
-		}
-	}
-	free(sdens_sp);
+		cal_sdens_sp(x_p,y_p,hdsl,dsx,Nc,sdens);
 	}
 }
 
-/*//void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {*/
-/*//	long m,i,j,nbx,nby;//,index;*/
-/*//	float hdsl,R,x_p,y_p;*/
-/*//	long i_l,j_l,i_u,j_u,loc_i,loc_j;*/
-/*//	float dsx = bsz/(float)(Nc);*/
-/*//*/
-/*//	for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {*/
-/*//		sdens[i*Nc+j] = 0.0;*/
-/*//	}*/
-/*//*/
-/*//*/
-/*//#pragma omp parallel num_threads(4)	\*/
-/*//	shared(SmoothLength,sdens,particle,Np,bsz,dsx) \*/
-/*//	private(m,x_p,y_p,R,hdsl,i_l,j_l,i_u,j_u,nbx,nby,i,j,loc_i,loc_j)*/
-/*//	{*/
-/*//	float *sdens_sp;*/
-/*//	sdens_sp = (float *)calloc(Nc*Nc,sizeof(float));*/
-/*//	#pragma omp for schedule(dynamic,16)*/
-/*//		for(m=0;m<Np;m++) {*/
-/*//			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].x)> 0.5*bsz)) continue;*/
-/*//*/
-/*//			hdsl = SmoothLength[m];*/
-/*//*/
-/*//			x_p = particle[m].x+0.5*bsz;*/
-/*//			y_p = particle[m].y+0.5*bsz;*/
-/*//*/
-/*//			i_u = (int)((x_p+2.0*hdsl)/dsx);*/
-/*//			i_l = (int)((x_p-2.0*hdsl)/dsx);*/
-/*//			nbx = i_u-i_l+1;*/
-/*//*/
-/*//			j_u = (int)((y_p+2.0*hdsl)/dsx);*/
-/*//			j_l = (int)((y_p-2.0*hdsl)/dsx);*/
-/*//			nby = j_u-j_l+1;*/
-/*//*/
-/*//			if (nbx == 1 && nby == 1) {*/
-/*//				sdens_sp[i_l*Nc+j_l] += 1.0/(dsx*dsx);*/
-/*//				continue;*/
-/*//			}*/
-/*//*/
-/*//			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {*/
-/*//				loc_i = i_l + i;*/
-/*//				loc_j = j_l + j;*/
-/*//				if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;*/
-/*//*/
-/*//				R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));*/
-/*//				sdens_sp[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);*/
-/*//			}*/
-/*//		}*/
-/*//	#pragma omp critical*/
-/*//	{*/
-/*//		for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {*/
-/*//			sdens[i*Nc+j] += sdens_sp[i*Nc+j];*/
-/*//		}*/
-/*//	}*/
-/*//	free(sdens_sp);*/
-/*//	}*/
-/*//}*/
+//void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {
+//	long m,i,j;//,index;
+//	float hdsl,x_p,y_p;
+//	//long i_l,j_l,i_u,j_u,loc_i,loc_j;
+//	float dsx = bsz/(float)(Nc);
+//
+//	for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
+//		sdens[i*Nc+j] = 0.0;
+//	}
+//
+//
+//#pragma omp parallel num_threads(4)	\
+//	shared(SmoothLength,sdens,particle,Np,bsz,dsx) \
+//	private(m,x_p,y_p,hdsl)
+//	{
+//	float *sdens_sp;
+//	sdens_sp = (float *)calloc(Nc*Nc,sizeof(float));
+//	#pragma omp for schedule(dynamic,16)
+//		for(m=0;m<Np;m++) {
+//
+//			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].y)> 0.5*bsz)) continue;
+//
+//			hdsl = SmoothLength[m];
+//
+//			x_p = particle[m].x+0.5*bsz;
+//			y_p = particle[m].y+0.5*bsz;
+//
+//			cal_sdens_sp(x_p,y_p,hdsl,dsx,Nc,sdens_sp);
+//		}
+//	#pragma omp critical
+//	{
+//		for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
+//			sdens[i*Nc+j] += sdens_sp[i*Nc+j];
+//		}
+//	}
+//	free(sdens_sp);
+//	}
+//}
+
+//void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {
+//	long m,i,j,nbx,nby;//,index;
+//	float hdsl,R,x_p,y_p;
+//	long i_l,j_l,i_u,j_u,loc_i,loc_j;
+//	float dsx = bsz/(float)(Nc);
+//
+//	for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
+//		sdens[i*Nc+j] = 0.0;
+//	}
+//
+//
+//#pragma omp parallel num_threads(4)	\
+//	shared(SmoothLength,sdens,particle,Np,bsz,dsx) \
+//	private(m,x_p,y_p,R,hdsl,i_l,j_l,i_u,j_u,nbx,nby,i,j,loc_i,loc_j)
+//	{
+//	float *sdens_sp;
+//	sdens_sp = (float *)calloc(Nc*Nc,sizeof(float));
+//	#pragma omp for schedule(dynamic,16)
+//		for(m=0;m<Np;m++) {
+//			if((fabs(particle[m].x) > 0.5*bsz) || (fabs(particle[m].x)> 0.5*bsz)) continue;
+//
+//			hdsl = SmoothLength[m];
+//
+//			x_p = particle[m].x+0.5*bsz;
+//			y_p = particle[m].y+0.5*bsz;
+//
+//			i_u = (int)((x_p+2.0*hdsl)/dsx);
+//			i_l = (int)((x_p-2.0*hdsl)/dsx);
+//			nbx = i_u-i_l+1;
+//
+//			j_u = (int)((y_p+2.0*hdsl)/dsx);
+//			j_l = (int)((y_p-2.0*hdsl)/dsx);
+//			nby = j_u-j_l+1;
+//
+//			if (nbx == 1 && nby == 1) {
+//				sdens_sp[i_l*Nc+j_l] += 1.0/(dsx*dsx);
+//				continue;
+//			}
+//
+//			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+//				loc_i = i_l + i;
+//				loc_j = j_l + j;
+//				if((loc_i>=Nc)||(loc_i<0)||(loc_j>=Nc)||(loc_j<0)) continue;
+//
+//				R=sqrt(pow((loc_i+0.5)*dsx-x_p,2)+pow((loc_j+0.5)*dsx-y_p,2));
+//				sdens_sp[loc_i*Nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
+//			}
+//		}
+//	#pragma omp critical
+//	{
+//		for(i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
+//			sdens[i*Nc+j] += sdens_sp[i*Nc+j];
+//		}
+//	}
+//	free(sdens_sp);
+//	}
+//}
 
 int cal_sph_sdens2(float *x1, float *x2, float *x3,float bsz,long  Nc,float dsx,long Ngb,long Np,float xc1,float xc2,float xc3,float mass_particle,float *sdens) {
 

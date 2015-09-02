@@ -14,6 +14,21 @@
 
 #define MAX_SOURCE_SIZE (0x100000)
 
+//--------------------------------------------------------------------
+void write_1_signal(char *out1,float *in1, int Nc) {
+	FILE *f1;
+	f1 =fopen(out1,"wb");
+
+	int i,j,index;
+
+	for (i=0;i<Nc;i++) for(j=0;j<Nc;j++) {
+		index = i*Nc+j;
+		fwrite(&in1[index],sizeof(float),1,f1);
+	}
+	//fwrite(in1,sizeof(float),Nc*Nc,f1);
+	fclose(f1);
+}
+
 void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int nc,int np,float *sdens_out,char * cl_name) {
 //----------------------------------------------------------------------------
 // Initialization
@@ -91,7 +106,9 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 	//printf("--------------------------%d\n", err);
     global = np;
 	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,NULL, 0, NULL, NULL);
+    size_t len=4;
+
+    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&len, 0, NULL, NULL);
     //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,NULL,NULL, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
     clFinish(commands);
@@ -123,7 +140,7 @@ int main(int argc, const char *argv[])
 	float bsz = 3.0;
 	int nc = 256;
 	int np = 200000;
-	int ngb = 16;
+	int ngb = 32;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	long Nc = (long)nc;
@@ -153,21 +170,26 @@ int main(int argc, const char *argv[])
 	if (sph == 1) {
 		printf("FindHsml is failed!\n");
 	}
+	free(particle);
 
 //--------------------------------------------------------------------
+	particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
+	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
 	Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
 //--------------------------------------------------------------------
-	for(i=0;i<np;i++) {
-  	  	x1_in[i] = particle[i].x;
-  	  	x2_in[i] = particle[i].y;
-  	  	x3_in[i] = particle[i].z;
-  	}
-	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
+	//for(i=0;i<np;i++) {
+  	//  	x1_in[i] = particle[i].x;
+  	//  	x2_in[i] = particle[i].y;
+  	//  	x3_in[i] = particle[i].z;
+  	//}
+	//call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 
     //for(i = 0; i < nc*nc; i++) {
 	//	if (sdens_out_c[i] > 0)
 	//		printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
     //}
+	write_1_signal("cpu_sdens.bin",sdens_out_c,nc);
+	write_1_signal("gpu_sdens.bin",sdens_out,nc);
 //--------------------------------------------------------------------
 
 	free(SmoothLength);
