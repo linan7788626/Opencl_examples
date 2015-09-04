@@ -12,8 +12,6 @@
 #include "allvars_SPH.h"
 #include "proto.h"
 
-#define MAX_SOURCE_SIZE (0x100000)
-
 //--------------------------------------------------------------------
 void write_1_signal(char *out1,float *in1, int Nc) {
 	FILE *f1;
@@ -50,12 +48,21 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 // Setup Context of OpenCL
 	int err;
     int gpu = 1;
-    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
-	printf("--------------------------%d\n", err);
-    context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
-    commands = clCreateCommandQueue(context, device_id, 0, &err);
+	unsigned int ndevices = 0;
+    //err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, &ndevices);
+	//printf("--------------------------%d\n", ndevices);
+    //context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+    //commands = clCreateCommandQueue(context, device_id, 0, &err);
+
+    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, NULL, &ndevices);
+	cl_device_id devices[ndevices];
+    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, ndevices, devices, NULL);
+
+    context = clCreateContext(NULL, ndevices, devices, NULL, NULL, &err);
+    commands = clCreateCommandQueue(context, devices[1], 0, &err);
 //---------------------------------------------------------------------
 //* Load kernel source file */
+	int MAX_SOURCE_SIZE = 1048576;
 	FILE * fp;
 	const char fileName[] = "./sph_opencl.cl";
 	size_t KernelSourceSize;
@@ -65,8 +72,8 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 		fprintf(stderr, "Failed to load kernel.\n");
 		exit(1);
 	}
-	KernelSource = (char *)malloc(MAX_SOURCE_SIZE);
-	KernelSourceSize = fread(KernelSource, 1, MAX_SOURCE_SIZE, fp);
+	KernelSource = (char *)malloc(MAX_SOURCE_SIZE*sizeof(char));
+	KernelSourceSize = fread(KernelSource,sizeof(char), MAX_SOURCE_SIZE, fp);
 	program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
 	err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
 	kernel = clCreateKernel(program, "sph_cl", &err);
@@ -137,9 +144,9 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 512;
-	int np = 2000;
-	int ngb = 32;
+	int nc = 2048;
+	int np = 200000;
+	int ngb = 4;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	long Nc = (long)nc;
@@ -155,45 +162,45 @@ int main(int argc, const char *argv[])
 	int i,sph;
 	PARTICLE *particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
 
-    for(i = 0; i < np; i++) {
-		particle[i].x = rand() / (float)RAND_MAX-0.5;
-		particle[i].y = rand() / (float)RAND_MAX-0.5;
-		particle[i].z = rand() / (float)RAND_MAX-0.5;
-		SmoothLength[i] = rand() / (float)RAND_MAX;
-  	}
+    //for(i = 0; i < np; i++) {
+	//	particle[i].x = rand() / (float)RAND_MAX-0.5;
+	//	particle[i].y = rand() / (float)RAND_MAX-0.5;
+	//	particle[i].z = rand() / (float)RAND_MAX-0.5;
+	//	SmoothLength[i] = rand() / (float)RAND_MAX;
+  	//}
 //--------------------------------------------------------------------
-	//Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
 
-	//double SPHBoxSize = 0.0;
-	//sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
-	//if (sph == 1) {
-	//	printf("FindHsml is failed!\n");
-	//}
-	//free(particle);
+	double SPHBoxSize = 0.0;
+	sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
+	if (sph == 1) {
+		printf("FindHsml is failed!\n");
+	}
+	free(particle);
 
 //--------------------------------------------------------------------
-	//particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
-	//Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
-	Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
+	particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
+	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	//Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
 //--------------------------------------------------------------------
 	for(i=0;i<np;i++) {
   	  	x1_in[i] = particle[i].x;
   	  	x2_in[i] = particle[i].y;
   	  	x3_in[i] = particle[i].z;
   	}
+	free(particle);
 	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 	//call_kernel_sph(x1_in,x2_in,x3_in,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 
-    for(i = 0; i < nc*nc; i++) {
-		if (sdens_out_c[i] > 0)
-			printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
-    }
+    //for(i = 0; i < nc*nc; i++) {
+	//	if (sdens_out_c[i] > 0)
+	//		printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
+    //}
 	write_1_signal("cpu_sdens.bin",sdens_out_c,nc);
 	write_1_signal("gpu_sdens.bin",sdens_out,nc);
 //--------------------------------------------------------------------
 
 	free(SmoothLength);
-	free(particle);
 	free(x1_in);
 	free(x2_in);
 	free(sdens_out);

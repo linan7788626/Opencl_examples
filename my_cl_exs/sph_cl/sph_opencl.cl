@@ -65,42 +65,41 @@ __kernel void sph_cl(
 	if (nbx <=2 && nby <=2) {
 		sdens_out[i_l*nc+j_l] += 1.0f/(dsx*dsx);
         //AtomicAdd(&sdens_out[i_l*nc+j_l], 1.0f/(dsx*dsx));
-		return;
+		//return;
 	}
-	else {
-		if ((nbx+nby)/2 <= Ncr) {
-			sd_tot = 0.0f;
-			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-				loc_i = i_l + i;
-				loc_j = j_l + j;
-				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-				sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
-			}
 
-			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-				loc_i = i_l + i;
-				loc_j = j_l + j;
-				if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
-
-				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
-				//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot);
-			}
-			return;
+	if ((nbx+nby)/2 <= Ncr) {
+		sd_tot = 0.0f;
+		for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+			loc_i = i_l + i;
+			loc_j = j_l + j;
+			R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+			sd_tot += si_weight(R/hdsl)/(hdsl*hdsl)*dsx*dsx;
 		}
 
-		if ((nbx+nby)/2 > Ncr) {
-			for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
-				loc_i = i_l + i;
-				loc_j = j_l + j;
-				if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
+		for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+			loc_i = i_l + i;
+			loc_j = j_l + j;
+			if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
 
-				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
-				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
-				//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl));
-			}
-			return;
+			R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+			sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
+			//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot);
 		}
+		//return;
 	}
-	return;
+
+	if ((nbx+nby)/2 > Ncr) {
+		for(i=0;i<nbx;i++) for(j=0;j<nby;j++) {
+			loc_i = i_l + i;
+			loc_j = j_l + j;
+			if((loc_i>=nc)||(loc_i<0)||(loc_j>=nc)||(loc_j<0)) continue;
+
+			R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
+			sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
+			//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl));
+		}
+		//return;
+	}
+	//return;
 }
