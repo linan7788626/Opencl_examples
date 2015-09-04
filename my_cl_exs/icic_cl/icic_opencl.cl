@@ -1,7 +1,7 @@
 __kernel void icic_cl(                      
-	__global float* source_map,                  
-	__global float* posy1,                  
-	__global float* posy2,
+	__const __global float* source_map,                  
+	__const __global float* posy1,                  
+	__const __global float* posy2,
 	__global float* lensed_map,
 	const float ysc1,
 	const float ysc2,

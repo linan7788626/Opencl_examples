@@ -232,6 +232,7 @@ int cal_sdens_sp(float x_p,float y_p,float hdsl,float dsx,long Nc, float *sdens_
 			return 0;
 		}
 	}
+	return 0;
 }
 
 void Make_cell_SPH(long Nc,float bsz,long Np, PARTICLE *particle, float * SmoothLength, float *sdens) {

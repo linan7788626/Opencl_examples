@@ -33,7 +33,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 //----------------------------------------------------------------------------
 // Initialization
     size_t global;                      // global domain size for our calculation
-    size_t local;                       // local domain size for our calculation
+    //size_t local;                       // local domain size for our calculation
 
     cl_device_id device_id;             // compute device id
     cl_context context;                 // compute context
@@ -87,7 +87,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 //----------------------------------------------------------------------------
 // Passing Parameters into Kernel Functions
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
-	printf("--------------------------%d\n", err);
+	printf("copy----------------------%d\n", err);
     err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
 	printf("--------------------------%d\n", err);
     err = clSetKernelArg(kernel, 2, sizeof(cl_mem), &input3);
@@ -99,17 +99,16 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     err = clSetKernelArg(kernel, 5, sizeof(int), &nc);
 	printf("--------------------------%d\n", err);
     err = clSetKernelArg(kernel, 6, sizeof(int), &np);
-	printf("--------------------------%d\n", err);
+	printf("copy----------------------%d\n", err);
 //----------------------------------------------------------------------------
 // Runing Kernel Functions
     //err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
 	//printf("--------------------------%d\n", err);
     global = np;
 	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
-    size_t len=4;
 
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&len, 0, NULL, NULL);
-    //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,NULL,NULL, 0, NULL, NULL);
+    //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&len, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,&global,NULL, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
     clFinish(commands);
 //----------------------------------------------------------------------------
@@ -138,8 +137,8 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 256;
-	int np = 200000;
+	int nc = 512;
+	int np = 2000;
 	int ngb = 32;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
@@ -153,41 +152,42 @@ int main(int argc, const char *argv[])
     float *sdens_out = (float *)malloc(sizeof(float)*nc*nc);
     float *sdens_out_c = (float *)malloc(sizeof(float)*nc*nc);
 
-	int i,j,sph;
+	int i,sph;
 	PARTICLE *particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
 
-    //for(i = 0; i < np; i++) {
-	//	particle[i].x = rand() / (float)RAND_MAX-0.5;
-	//	particle[i].y = rand() / (float)RAND_MAX-0.5;
-	//	particle[i].z = rand() / (float)RAND_MAX-0.5;
-	//	//SmoothLength[i] = rand() / (float)RAND_MAX;
-  	//}
+    for(i = 0; i < np; i++) {
+		particle[i].x = rand() / (float)RAND_MAX-0.5;
+		particle[i].y = rand() / (float)RAND_MAX-0.5;
+		particle[i].z = rand() / (float)RAND_MAX-0.5;
+		SmoothLength[i] = rand() / (float)RAND_MAX;
+  	}
 //--------------------------------------------------------------------
-	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	//Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
 
-	double SPHBoxSize = 0.0;
-	sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
-	if (sph == 1) {
-		printf("FindHsml is failed!\n");
-	}
-	free(particle);
+	//double SPHBoxSize = 0.0;
+	//sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
+	//if (sph == 1) {
+	//	printf("FindHsml is failed!\n");
+	//}
+	//free(particle);
 
 //--------------------------------------------------------------------
-	particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
-	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	//particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
+	//Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
 	Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
 //--------------------------------------------------------------------
-	//for(i=0;i<np;i++) {
-  	//  	x1_in[i] = particle[i].x;
-  	//  	x2_in[i] = particle[i].y;
-  	//  	x3_in[i] = particle[i].z;
-  	//}
-	//call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
+	for(i=0;i<np;i++) {
+  	  	x1_in[i] = particle[i].x;
+  	  	x2_in[i] = particle[i].y;
+  	  	x3_in[i] = particle[i].z;
+  	}
+	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
+	//call_kernel_sph(x1_in,x2_in,x3_in,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 
-    //for(i = 0; i < nc*nc; i++) {
-	//	if (sdens_out_c[i] > 0)
-	//		printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
-    //}
+    for(i = 0; i < nc*nc; i++) {
+		if (sdens_out_c[i] > 0)
+			printf("%f-----%f|\n",sdens_out_c[i],sdens_out[i]);
+    }
 	write_1_signal("cpu_sdens.bin",sdens_out_c,nc);
 	write_1_signal("gpu_sdens.bin",sdens_out,nc);
 //--------------------------------------------------------------------

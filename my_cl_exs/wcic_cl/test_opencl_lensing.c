@@ -84,9 +84,10 @@ void call_kernel_wcic(float *cic_in,float *x_in,float *y_in,float bsx,float bsy,
     clSetKernelArg(kernel, 8, sizeof(int), &np);
 //----------------------------------------------------------------------------
 // Runing Kernel Functions
-    err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
+    //err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
     global = np;
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+    //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, NULL, 0, NULL, NULL);
 	printf("--------------------------%d\n", err);
     clFinish(commands);
 //----------------------------------------------------------------------------
@@ -115,9 +116,9 @@ int main(int argc, const char *argv[]) {
 	float bsx = 1.0;
 	float bsy = 1.0;
 
-	int nx = 256;
-	int ny = 256;
-	int np = 1024*1024;
+	int nx = 1024;
+	int ny = 1024;
+	int np = 1024*1024+100;
 
     float *cic_in = (float *)malloc(sizeof(float)*np);
     float *x_in = (float *)malloc(sizeof(float)*np);
