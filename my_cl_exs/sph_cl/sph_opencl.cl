@@ -29,10 +29,10 @@ inline float si_weight(float x) {
 }
 
 __kernel void sph_cl(                      
-	__const __global float* x1_in,                  
-	__const __global float* x2_in,                  
-	__const __global float* SmoothLength,
-	__global float* sdens_out,
+	__const __global float * x1_in,                  
+	__const __global float * x2_in,                  
+	__const __global float * SmoothLength,
+	__global float * sdens_out,
 	const float bsz,
 	const int nc,
 	const int np) {                                          

@@ -81,10 +81,13 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, NULL, &ndevices);
 	cl_device_id devices[ndevices];
     err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, ndevices, devices, NULL);
+	printf("--------------------------%d\n",err);
 
-    //context = clCreateContext(NULL, ndevices, devices, NULL, NULL, &err);
-	context = CL_CHECK_ERR(clCreateContext(NULL, ndevices, devices, &pfn_notify, NULL, &_err));
+    context = clCreateContext(NULL, ndevices, devices, NULL, NULL, &err);
+	//context = CL_CHECK_ERR(clCreateContext(NULL, ndevices, devices, &pfn_notify, NULL, &_err));
+	printf("--------------------------%d\n",err);
     commands = clCreateCommandQueue(context, devices[1], 0, &err);
+	printf("--------------------------%d\n",err);
 //---------------------------------------------------------------------
 //* Load kernel source file */
 	int MAX_SOURCE_SIZE = 1048576;
@@ -100,8 +103,10 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 	KernelSource = (char *)malloc(MAX_SOURCE_SIZE*sizeof(char));
 	KernelSourceSize = fread(KernelSource,sizeof(char), MAX_SOURCE_SIZE, fp);
 	program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+	printf("--------------------------%d\n",err);
 	clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
 	kernel = clCreateKernel(program, "sph_cl", &err);
+	printf("--------------------------%d\n",err);
 //----------------------------------------------------------------------------
 // Allocate Memory for Device
     input1 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)*np, NULL, NULL);
@@ -111,24 +116,36 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 //----------------------------------------------------------------------------
 // Copy Data to Device
     clEnqueueWriteBuffer(commands, input1, CL_TRUE, 0, sizeof(float)*np, x1_in, 0, NULL, NULL);
+	printf("--------------------------%d\n",err);
     clEnqueueWriteBuffer(commands, input2, CL_TRUE, 0, sizeof(float)*np, x2_in, 0, NULL, NULL);
+	printf("--------------------------%d\n",err);
     clEnqueueWriteBuffer(commands, input3, CL_TRUE, 0, sizeof(float)*np, SmoothLength, 0, NULL, NULL);
+	printf("--------------------------%d\n",err);
 //----------------------------------------------------------------------------
 // Passing Parameters into Kernel Functions
-    clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
-    clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
-    clSetKernelArg(kernel, 2, sizeof(cl_mem), &input3);
-    clSetKernelArg(kernel, 3, sizeof(cl_mem), &output);
-    clSetKernelArg(kernel, 4, sizeof(float), &bsz);
-    clSetKernelArg(kernel, 5, sizeof(int), &nc);
-    clSetKernelArg(kernel, 6, sizeof(int), &np);
+    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
+	printf("passing--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
+	printf("--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), &input3);
+	printf("--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 3, sizeof(cl_mem), &output);
+	printf("--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 4, sizeof(float), &bsz);
+	printf("--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 5, sizeof(int), &nc);
+	printf("--------------------------%d\n",err);
+    err = clSetKernelArg(kernel, 6, sizeof(int), &np);
+	printf("passing--------------------------%d\n",err);
 //----------------------------------------------------------------------------
 // Runing Kernel Functions
-    clGetKernelWorkGroupInfo(kernel, devices[1], CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
+    //clGetKernelWorkGroupInfo(kernel, devices[1], CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
     global = np;
 	local = 1000;
 
-    clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
+    //clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
+	printf("--------------------------%d\n",err);
     //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,&global,NULL, 0, NULL, NULL);
     clFinish(commands);
 //----------------------------------------------------------------------------
@@ -156,7 +173,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 2048;
+	int nc = 1024*2;
 	int np = 200000;
 	int ngb = 4;
 	long Np = (long)np;
