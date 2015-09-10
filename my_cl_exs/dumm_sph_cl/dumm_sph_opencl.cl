@@ -14,9 +14,12 @@ __kernel void sph_cl(
 	float R;
 	float x;
 	float sigma = 10.0f/(7.0f*3.141592653589793f);
-	float res = 0.0f;
-	float tmp = 0.0f;
-	float hdsl = 0.0f;
+	float res;
+	res = 0.0f;
+	float tmp;
+	tmp = 0.0f;
+	float hdsl;
+	hdsl = 0.0f;
 
 	for (i = 0;i<np;i++) {
 		R = sqrt((x1_in[i]-g1_in[index])*(x1_in[i]-g1_in[index])+(x2_in[i]-g2_in[index])*(x2_in[i]-g2_in[index]));
@@ -37,4 +40,4 @@ __kernel void sph_cl(
 		res = res + tmp/(hdsl*hdsl); 
 	}
 	sdens_out[index] = res;
-};
+}

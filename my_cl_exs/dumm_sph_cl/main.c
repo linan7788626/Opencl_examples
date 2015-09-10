@@ -163,8 +163,8 @@ void call_kernel_sph(float *g1_in,float *g2_in,float *x1_in,float *x2_in,float *
 //----------------------------------------------------------------------------
 // Output Array
 	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
-    clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float)*nc*nc, sdens_out, 0, NULL, NULL );
-	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+    err = clEnqueueReadBuffer( commands, output, CL_TRUE, 0, sizeof(float)*nc*nc, sdens_out, 0, NULL, NULL );
+	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^%d\n",err);
 //----------------------------------------------------------------------------
 // Free the Memory in Device
     clReleaseMemObject(input1);
@@ -186,7 +186,7 @@ void call_kernel_sph(float *g1_in,float *g2_in,float *x1_in,float *x2_in,float *
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 256;
+	int nc = 2048;
 	int np = 200000;
 	int ngb = 32;
 	long Np = (long)np;

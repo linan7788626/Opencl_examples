@@ -173,12 +173,12 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 1024*2;
+	int nc = 1024;
 	int np = 200000;
-	int ngb = 4;
+	int ngb = 16;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
-	//long Nc = (long)nc;
+	long Nc = (long)nc;
 
     float *x1_in = (float *)malloc(np*sizeof(float));
     float *x2_in = (float *)malloc(np*sizeof(float));
