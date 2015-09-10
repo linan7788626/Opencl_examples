@@ -173,7 +173,7 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 1024;
+	int nc = 2048;
 	int np = 200000;
 	int ngb = 16;
 	long Np = (long)np;

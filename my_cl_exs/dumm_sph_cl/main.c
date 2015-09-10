@@ -188,7 +188,7 @@ int main(int argc, const char *argv[])
 	float bsz = 3.0;
 	int nc = 2048;
 	int np = 200000;
-	int ngb = 32;
+	int ngb = 8;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	//long Nc = (long)nc;
