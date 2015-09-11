@@ -13,7 +13,7 @@ def main():
     pl.figure(figsize=(10,10))
     pl.contour(acpu.reshape((np.sqrt(len(acpu)),np.sqrt(len(acpu)))),levels,colors=('k'))
     #pl.figure(figsize=(10,10))
-    pl.contour(agpu.reshape((np.sqrt(len(agpu)),np.sqrt(len(agpu)))),levels,colors=('r'))
+    pl.contour(agpu.reshape((np.sqrt(len(agpu)),np.sqrt(len(agpu))))*10.0,levels,colors=('r'))
     pl.show()
 
 if __name__ == '__main__':

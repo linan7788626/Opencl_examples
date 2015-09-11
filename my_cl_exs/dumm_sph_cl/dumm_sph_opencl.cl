@@ -22,24 +22,23 @@ __kernel void sph_cl(
 	hdsl = 0.0f;
 
 	for (i = 0;i<np;i++) {
-		//R = sqrt((x1_in[i]-g1_in[index])*(x1_in[i]-g1_in[index])+(x2_in[i]-g2_in[index])*(x2_in[i]-g2_in[index]));
-		//hdsl = SmoothLength[i];
-		//x = R/hdsl;
+		R = sqrt((x1_in[i]-g1_in[index])*(x1_in[i]-g1_in[index])+(x2_in[i]-g2_in[index])*(x2_in[i]-g2_in[index]));
+		hdsl = SmoothLength[i];
+		x = R/hdsl;
 
-		//if (x>2.0f) {
-		//	continue;
-		//}
-		//else {
-		//	if (x>=0.0f && x< 1.0f) {
-		//		tmp = sigma*(1.0f-1.5f*x*x+0.75f*x*x*x);
-		//	}
-		//	if (x>=1.0f && x< 2.0f) {
-		//		tmp = sigma*0.25f*(2.0f-x)*(2.0f-x)*(2.0f-x);
-		//	}
-		//}
-		//res = res + tmp/(hdsl*hdsl); 
+		if (x>2.0f) {
+			continue;
+		}
+		else {
+			if (x>=0.0f && x< 1.0f) {
+				tmp = sigma*(1.0f-1.5f*x*x+0.75f*x*x*x);
+			}
+			if (x>=1.0f && x< 2.0f) {
+				tmp = sigma*0.25f*(2.0f-x)*(2.0f-x)*(2.0f-x);
+			}
+		}
+		res = res + tmp/(hdsl*hdsl); 
 		res = res + 1.0f; 
 	}
-	//sdens_out[index] = res;
 	sdens_out[index] = res;
 }

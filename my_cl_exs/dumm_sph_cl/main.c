@@ -153,7 +153,7 @@ void call_kernel_sph(float *g1_in,float *g2_in,float *x1_in,float *x2_in,float *
 // Runing Kernel Functions
     //clGetKernelWorkGroupInfo(kernel, devices[1], CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
     global = nc*nc;
-	local = 1024;
+	local = 128;
 
     //clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
     err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
@@ -186,9 +186,9 @@ void call_kernel_sph(float *g1_in,float *g2_in,float *x1_in,float *x2_in,float *
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 2048;
-	int np = 200000;
-	int ngb = 8;
+	int nc = 1024;
+	int np = 20000;
+	int ngb = 64;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	//long Nc = (long)nc;
@@ -214,14 +214,9 @@ int main(int argc, const char *argv[])
 		g2_in[index] = j*dsx+0.5*dsx-bsz/2.0;
   	}
 
-    //for(i = 0; i < np; i++) {
-	//	//particle[i].x = rand() / (float)RAND_MAX-0.5;
-	//	//particle[i].y = rand() / (float)RAND_MAX-0.5;
-	//	//particle[i].z = rand() / (float)RAND_MAX-0.5;
-	//	SmoothLength[i] = 0.05;
-  	//}
 //--------------------------------------------------------------------
-	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	//Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e4.dat",particle);
 
 	double SPHBoxSize = 0.0;
 	sph = findHsml(particle,&Np,&Ngb,&SPHBoxSize,SmoothLength);
@@ -232,7 +227,7 @@ int main(int argc, const char *argv[])
 
 //--------------------------------------------------------------------
 	particle = (PARTICLE *)malloc(np*sizeof(PARTICLE));
-	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e5.dat",particle);
+	Loadin_particle_main_ascii(Np,"./lib_so_omp_norm_sph/input_files/cnfw_2e4.dat",particle);
 	//Make_cell_SPH(Nc,bsz,Np,particle,SmoothLength,sdens_out_c);
 //--------------------------------------------------------------------
 	for(i=0;i<np;i++) {
