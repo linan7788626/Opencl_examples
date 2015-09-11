@@ -38,7 +38,7 @@ void call_kernel_icic(float *source_map,float *posy1,float *posy2, float ysc1, f
 //----------------------------------------------------------------------------
 // Setup Context of OpenCL
 	int err;
-    int gpu = 1;
+    int gpu = 0;
     err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
     context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
     commands = clCreateCommandQueue(context, device_id, 0, &err);

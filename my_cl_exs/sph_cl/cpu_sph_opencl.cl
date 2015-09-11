@@ -1,18 +1,3 @@
-//inline void AtomicAdd(volatile __global float *source, const float operand) {
-//    union {
-//        unsigned int intVal;
-//        float floatVal;
-//    } newVal;
-//    union {
-//        unsigned int intVal;
-//        float floatVal;
-//    } prevVal;
-//    do {
-//        prevVal.floatVal = *source;
-//        newVal.floatVal = prevVal.floatVal + operand;
-//    } while (atomic_cmpxchg((volatile __global unsigned int *)source, prevVal.intVal, newVal.intVal) != prevVal.intVal);
-//}
-
 inline float si_weight(float x) {
 	float sigma = 10.0f/(7.0f*3.141592653589793f);
 	float res = 0.0f;
@@ -65,7 +50,6 @@ __kernel void sph_cl(
 
 	if (nbx <=2 && nby <=2) {
 		sdens_out[i_l*nc+j_l] += 1.0f/(dsx*dsx);
-        //AtomicAdd(&sdens_out[i_l*nc+j_l], 1.0f/(dsx*dsx));
 		return;
 	}
 
@@ -86,7 +70,6 @@ __kernel void sph_cl(
 
 				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
 				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot;
-				//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl)/sd_tot);
 			}
 			return;
 		}
@@ -99,7 +82,6 @@ __kernel void sph_cl(
 
 				R=sqrt(pow((loc_i+0.5f)*dsx-x_p,2)+pow((loc_j+0.5f)*dsx-y_p,2));
 				sdens_out[loc_i*nc+loc_j] += si_weight(R/hdsl)/(hdsl*hdsl);
-				//AtomicAdd(&sdens_out[loc_i*nc+loc_j], si_weight(R/hdsl)/(hdsl*hdsl));
 			}
 			return;
 		}

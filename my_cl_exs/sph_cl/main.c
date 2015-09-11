@@ -11,6 +11,7 @@
 #include "intfuncs.h"
 #include "allvars_SPH.h"
 #include "proto.h"
+
 #define CL_CHECK(_expr)                                                         \
    do {                                                                         \
      cl_int _err = _expr;                                                       \
@@ -57,6 +58,10 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     size_t global;                      // global domain size for our calculation
     size_t local;                       // local domain size for our calculation
 
+    FILE* programHandle;
+    size_t programSize, KernelSourceSize;
+    char *programBuffer, *KernelSource;
+
     //cl_device_id device_id;             // compute device id
     cl_context context;                 // compute context
     cl_command_queue commands;          // compute command queue
@@ -70,43 +75,70 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
     cl_mem output;                      // device memory used for the output array
 //----------------------------------------------------------------------------
 // Setup Context of OpenCL
+	//-----CPU
 	int err;
-    int gpu = 1;
 	unsigned int ndevices = 0;
-    //err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &device_id, &ndevices);
-	//printf("--------------------------%d\n", ndevices);
-    //context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
-    //commands = clCreateCommandQueue(context, device_id, 0, &err);
+	cl_device_id device_id;
 
-    clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, NULL, &ndevices);
-	cl_device_id devices[ndevices];
-    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, ndevices, devices, NULL);
-	printf("--------------------------%d\n",err);
+	clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+	//context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+	context = CL_CHECK_ERR(clCreateContext(0, 1, &device_id, &pfn_notify, NULL, &_err));
+	commands = clCreateCommandQueue(context, device_id, 0, &err);
 
-    context = clCreateContext(NULL, ndevices, devices, NULL, NULL, &err);
+	//-----GPU
+	//int err;
+    //int gpu = 0;
+	//unsigned int ndevices = 0;
+
+    //clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, NULL, &ndevices);
+	//cl_device_id devices[ndevices];
+    //err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, ndevices, devices, NULL);
+	//printf("--------------------------%d\n",err);
+
+    ////context = clCreateContext(NULL, ndevices, devices, NULL, NULL, &err);
 	//context = CL_CHECK_ERR(clCreateContext(NULL, ndevices, devices, &pfn_notify, NULL, &_err));
-	printf("--------------------------%d\n",err);
-    commands = clCreateCommandQueue(context, devices[1], 0, &err);
-	printf("--------------------------%d\n",err);
+	//printf("--------------------------%d\n",err);
+    //commands = clCreateCommandQueue(context, devices[0], 0, &err);
+	//printf("--------------------------%d\n",err);
 //---------------------------------------------------------------------
 //* Load kernel source file */
-	int MAX_SOURCE_SIZE = 1048576;
-	FILE * fp;
-	const char fileName[] = "./sph_opencl.cl";
-	size_t KernelSourceSize;
-	char *KernelSource;
-	fp = fopen(fileName, "r");
-	if (!fp) {
-		fprintf(stderr, "Failed to load kernel.\n");
-		exit(1);
-	}
-	KernelSource = (char *)malloc(MAX_SOURCE_SIZE*sizeof(char));
-	KernelSourceSize = fread(KernelSource,sizeof(char), MAX_SOURCE_SIZE, fp);
-	program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
-	printf("--------------------------%d\n",err);
-	clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-	kernel = clCreateKernel(program, "sph_cl", &err);
-	printf("--------------------------%d\n",err);
+	//int MAX_SOURCE_SIZE = 1048576;
+	//FILE * fp;
+	//size_t KernelSourceSize;
+	//char *KernelSource;
+	//fp = fopen(cl_name, "r");
+	//if (!fp) {
+	//	fprintf(stderr, "Failed to load kernel.\n");
+	//	exit(1);
+	//}
+	//KernelSource = (char *)malloc(MAX_SOURCE_SIZE*sizeof(char));
+	//KernelSourceSize = fread(KernelSource,sizeof(char), MAX_SOURCE_SIZE, fp);
+	//program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+	//printf("Create--------------------------%d\n",err);
+	//clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+	//kernel = clCreateKernel(program, "sph_cl", &err);
+	//printf("Kernel--------------------------%d\n",err);
+
+    programHandle = fopen(cl_name, "r");
+    fseek(programHandle, 0, SEEK_END);
+    programSize = ftell(programHandle);
+    rewind(programHandle);
+
+    programBuffer = (char*) malloc(programSize + 1);
+    programBuffer[programSize] = '\0';
+    fread(programBuffer, sizeof(char), programSize, programHandle);
+    fclose(programHandle);
+
+    program = clCreateProgramWithSource(context,1,(const char**) &programBuffer,&programSize, NULL);
+    free(programBuffer);
+
+    clGetProgramInfo(program, CL_PROGRAM_SOURCE, 0, NULL, &KernelSourceSize);
+    KernelSource = (char*) malloc(KernelSourceSize);
+    clGetProgramInfo(program, CL_PROGRAM_SOURCE, KernelSourceSize, KernelSource, NULL);
+
+    program = clCreateProgramWithSource(context, 1, (const char **) & KernelSource, NULL, &err);
+    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    kernel = clCreateKernel(program, "sph_cl", &err);
 //----------------------------------------------------------------------------
 // Allocate Memory for Device
     input1 = clCreateBuffer(context, CL_MEM_READ_ONLY,  sizeof(float)*np, NULL, NULL);
@@ -141,12 +173,12 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 // Runing Kernel Functions
     //clGetKernelWorkGroupInfo(kernel, devices[1], CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
     global = np;
-	local = 1000;
+	local = 50;
 
     //clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
+    //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global,&local, 0, NULL, NULL);
 	printf("--------------------------%d\n",err);
-    //err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,&global,NULL, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL,&global,NULL, 0, NULL, NULL);
     clFinish(commands);
 //----------------------------------------------------------------------------
 // Output Array
@@ -173,9 +205,9 @@ void call_kernel_sph(float *x1_in,float *x2_in,float *SmoothLength,float bsz,int
 int main(int argc, const char *argv[])
 {
 	float bsz = 3.0;
-	int nc = 2048;
+	int nc = 512;
 	int np = 200000;
-	int ngb = 16;
+	int ngb = 32;
 	long Np = (long)np;
 	long Ngb = (long)ngb;
 	long Nc = (long)nc;
@@ -218,7 +250,7 @@ int main(int argc, const char *argv[])
   	  	x3_in[i] = particle[i].z;
   	}
 	free(particle);
-	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./sph_opencl.cl");
+	call_kernel_sph(x1_in,x2_in,SmoothLength,bsz,nc,np,sdens_out,"./cpu_sph_opencl.cl");
 	//call_kernel_sph(x1_in,x2_in,x3_in,bsz,nc,np,sdens_out,"./sph_opencl.cl");
 
     //for(i = 0; i < nc*nc; i++) {

@@ -30,7 +30,8 @@ void call_kernel_2d(float *x1,float *x2,float *x11,float *x12,float *x21,float *
 	cl_uint nd;
 	cl_mem input1,input2,output1,output2,output3,output4;
 
-	err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL); context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+	err = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+	context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
 	commands = clCreateCommandQueue(context, device_id, 0, &err);
 
 	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * Nc*Nc, NULL, NULL);
